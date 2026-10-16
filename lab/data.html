@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<title>Cohérence · tes données</title>
+<style>
+  :root { --bg:#0A0908; --s1:#12100D; --line:#2A251D; --tx:#F4EDDC; --mu:#A39887; --gold:#D9AA52; --red:#D07358; --ok:#8FBF7A; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; background:var(--bg); color:var(--tx); font:16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-text-size-adjust:100%; }
+  main { max-width: 430px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)); }
+  a.back { display:inline-block; color:var(--mu); text-decoration:none; padding:8px 0; }
+  h1 { font-size: 22px; margin: 4px 0 2px; font-weight: 600; }
+  h2 { font-size: 17px; margin: 22px 0 2px; font-weight: 600; }
+  p { margin: 6px 0; color: var(--mu); }
+  button { font: inherit; color: var(--bg); background: var(--gold); border: 0; border-radius: 14px; padding: 14px 16px; width: 100%; margin: 6px 0; font-weight: 600; }
+  button.ghost { background: transparent; color: var(--tx); border: 1px solid var(--line); }
+  button.danger { background: var(--red); color: #1A0D08; }
+  button[disabled] { opacity: .4; }
+  .card { background: var(--s1); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
+  .who { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .who:last-child { border-bottom: 0; }
+  .who b { font-weight: 600; }
+  .who span { display:block; color: var(--mu); font-size: 14px; }
+  .ok { color: var(--ok); } .bad { color: var(--red); } .gold { color: var(--gold); }
+  textarea { width: 100%; height: 110px; background: #0d0b09; color: var(--tx); border: 1px solid var(--line); border-radius: 10px; font: 11px/1.35 ui-monospace, Menlo, monospace; padding: 8px; }
+  input[type=file] { width: 100%; color: var(--mu); margin: 6px 0; }
+  .note { font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/lab/index.html">‹ Atelier</a>
+  <h1>Tes données</h1>
+  <p>Elles vivent seulement dans l'app, sur ce téléphone. Cette page en garde une copie, ou la remet en place.</p>
+  <p class="note" id="where"></p>
+
+  <div class="card" id="status"><p>Je regarde…</p></div>
+
+  <button id="save">Enregistrer une copie (fichier)</button>
+  <button id="copy" class="ghost">Copier le texte de la copie</button>
+
+  <h2>Remettre une copie</h2>
+  <p>Choisis le fichier, ou colle son texte. Ça remplace, sur ce téléphone, les personnes présentes dans la copie.</p>
+  <input type="file" id="file" accept=".json,application/json,text/plain">
+  <textarea id="paste" placeholder="… ou colle ici le texte de la copie" spellcheck="false"></textarea>
+  <div class="card" id="preview" hidden></div>
+  <button id="restore" class="ghost" disabled>Remettre cette copie</button>
+  <p class="note" id="done" hidden></p>
+</main>
+
+<script src="/js/version.js"></script>
+<script src="/js/store.js"></script>
+<script>
+(function () {
+  var S = COH.store, $ = function (id) { return document.getElementById(id); };
+  var NAMES = { adri: 'Adri', mehdi: 'Mehdi' }, pending = null, armed = 0;
+
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function longDay(iso) { var d = new Date(iso + 'T12:00:00'); return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }); }
+  function describe(p) {                                                    // one profile, in a line
+    if (!p) return 'rien';
+    var n = (p.sessions || []).length, last = (p.sessions || []).reduce(function (m, s) { return s.day && s.day > m ? s.day : m; }, '');
+    var bits = [n + (n === 1 ? ' séance' : ' séances')];
+    if ((p.sos || []).length) bits.push(p.sos.length + ' SOS');
+    if ((p.cyc || []).length) bits.push(p.cyc.length + ' soupir' + (p.cyc.length === 1 ? ' cyclique' : 's cycliques'));
+    bits.push(p.rhythm ? 'rythme ' + p.rhythm.value.toFixed(1) : 'pas de rythme');
+    if (last) bits.push('dernière : ' + longDay(last));
+    return bits.join(' · ');
+  }
+
+  function paintStatus() {
+    return Promise.all(S.WHO.map(function (w) { return S.load(w); })).then(function (ps) {
+      $('status').innerHTML = ps.map(function (p) { return '<div class="who"><b>' + NAMES[p.who] + '</b><span>' + esc(describe(p)) + '</span></div>'; }).join('');
+    });
+  }
+
+  function stamp() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+
+  $('save').addEventListener('click', function () {
+    S.exportAll().then(function (text) {
+      var name = 'coherence-' + stamp() + '.json', file = new File([text], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: 'Cohérence — copie des données' }).catch(function (e) { if (!e || e.name !== 'AbortError') throw e; });
+      }
+      var a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    }).catch(function (e) { $('done').hidden = false; $('done').className = 'note bad'; $('done').textContent = 'Impossible d’enregistrer : ' + (e && e.message); });
+  });
+
+  $('copy').addEventListener('click', function () {
+    S.exportAll().then(function (text) {
+      var ta = $('paste'), b = $('copy'), done = function () { b.textContent = 'Copié'; setTimeout(function () { b.textContent = 'Copier le texte de la copie'; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { ta.value = text; ta.focus(); ta.select(); document.execCommand('copy'); done(); });
+      else { ta.value = text; ta.focus(); ta.select(); document.execCommand('copy'); done(); }
+    });
+  });
+
+  /* a copy is read, shown next to what the phone has, and only then put back — on a second touch */
+  function preview(text) {
+    var d = null;
+    try { d = JSON.parse(text); } catch (e) { d = null; }
+    var box = $('preview'), btn = $('restore');
+    pending = null; armed = 0; btn.className = 'ghost'; btn.textContent = 'Remettre cette copie'; btn.disabled = true; $('done').hidden = true;
+    if (!text.trim()) { box.hidden = true; return; }
+    box.hidden = false;
+    if (!d || d.app !== 'coherence' || !d.profiles) { box.innerHTML = '<span class="bad">Ce n’est pas une copie de Cohérence.</span>'; return; }
+    var rows = S.WHO.filter(function (w) { return d.profiles[w]; }).map(function (w) {
+      var mine = S.profile(w), theirs = S.normalizeProfile(d.profiles[w], w), fewer = mine && theirs.sessions.length < mine.sessions.length;
+      return '<div class="who"><b>' + NAMES[w] + '</b><span>dans la copie : ' + esc(describe(theirs)) + '</span><span>sur ce téléphone : ' + esc(describe(mine)) + '</span>' +
+             (fewer ? '<span class="bad">La copie a ' + (mine.sessions.length - theirs.sessions.length) + ' séance(s) de moins que le téléphone : elles seraient perdues.</span>' : '') + '</div>';
+    });
+    if (!rows.length) { box.innerHTML = '<span class="bad">Cette copie ne contient personne.</span>'; return; }
+    box.innerHTML = rows.join('') + '<p class="note">Copie faite le ' + esc(d.exportedAt ? new Date(d.exportedAt).toLocaleString('fr-FR') : '?') + '.</p>';
+    pending = text; btn.disabled = false;
+  }
+  $('paste').addEventListener('input', function () { preview($('paste').value); });
+  $('file').addEventListener('change', function () {
+    var f = $('file').files && $('file').files[0]; if (!f) return;
+    var r = new FileReader(); r.onload = function () { $('paste').value = String(r.result); preview(String(r.result)); }; r.readAsText(f);
+  });
+
+  $('restore').addEventListener('click', function () {
+    if (!pending) return;
+    var btn = $('restore');
+    if (!armed) {                                                             // first touch: ask again
+      armed = 1; btn.className = 'danger'; btn.textContent = 'Toucher encore pour remplacer';
+      setTimeout(function () { if (armed === 1) { armed = 0; btn.className = 'ghost'; btn.textContent = 'Remettre cette copie'; } }, 5000);
+      return;
+    }
+    armed = 2; btn.disabled = true;
+    S.importAll(pending).then(function () { return S.flush(); }).then(function () {
+      pending = null; btn.className = 'ghost'; btn.textContent = 'Remettre cette copie';
+      $('done').hidden = false; $('done').className = 'note ok'; $('done').textContent = '✓ C’est remis. Retourne dans l’app.';
+      $('preview').hidden = true; $('paste').value = ''; return paintStatus();
+    }).catch(function (e) { $('done').hidden = false; $('done').className = 'note bad'; $('done').textContent = 'Échec : ' + (e && e.message); btn.disabled = false; armed = 0; });
+  });
+
+  var standalone = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+  $('where').innerHTML = standalone ? '<span class="ok">Tu es dans l’app : ce sont bien les données de l’app.</span>'
+    : '<span class="gold">Attention : tu es dans le navigateur, pas dans l’app. Sur iPhone, l’icône de l’écran d’accueil garde ses données à part. Pour la copie de l’app, ouvre cette page depuis l’app : Réglages → touche la ligne « Cohérence · version » tout en bas.</span>';
+
+  S.init().then(function (r) {
+    if (r.volatile) { $('status').innerHTML = '<span class="bad">Ce navigateur refuse de garder quoi que ce soit ici.</span>'; return; }
+    return paintStatus();
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+/* the app's own additions — the drawing's kit is css/app.css (lifted by scripts/lift.py, never hand-edited) */
+.app{max-width:430px;margin-inline:auto}
+.calnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+.calnav .lbl{flex:1;text-align:center}
+.calnav .ib{width:40px;height:40px;color:var(--mu)}
+.calnav .ib[disabled]{opacity:.3;pointer-events:none}
+.camvideo{position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1}
+/* Begin, while it waits for the pulse to settle: dimmed and breathing, and it takes no second tap */
+.btn.busy{pointer-events:none;opacity:.72;animation:cohbusy 1.3s ease-in-out infinite}
+@keyframes cohbusy{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.btn.busy{animation:none;opacity:.55}}
+.verlink{color:inherit;text-decoration:none;-webkit-touch-callout:none}
+html,body,button,.btn,[data-go],[data-do]{touch-action:manipulation}

@@ -1,0 +1,7 @@
+.vercel
+.DS_Store
+__pycache__/
+node_modules
+tests/fixtures/*.mjpeg
+*.log
+.env*

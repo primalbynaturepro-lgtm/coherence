@@ -1,0 +1,21 @@
+{
+  "name": "Cohérence",
+  "short_name": "Cohérence",
+  "description": "Coherence breathing with your own pulse: a rhythm found once, three sessions a day.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0A0908",
+  "theme_color": "#0A0908",
+  "lang": "en",
+  "categories": ["health", "lifestyle"],
+  "icons": [
+    { "src": "/assets/icons/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/assets/icons/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/assets/icons/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "/assets/icons/icon-maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
+}

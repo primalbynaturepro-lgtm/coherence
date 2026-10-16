@@ -1,0 +1,10 @@
+tests
+scripts
+README.md
+DECISIONS.md
+deploy.sh
+.vercelignore
+.gitignore
+.DS_Store
+*.log
+.env*

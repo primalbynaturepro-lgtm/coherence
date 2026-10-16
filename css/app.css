@@ -1,0 +1,313 @@
+/* lifted from the drawing by scripts/lift.py — never hand-edited; the app's own additions are in extra.css */
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:500;font-display:block;src:url(/assets/fonts/fraunces-500.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:block;src:url(/assets/fonts/inter-400.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:500;font-display:block;src:url(/assets/fonts/inter-500.woff2) format('woff2')}
+/* the tokens live ON .app (never :root): the gold can be swapped from the kit and every color-mix follows */
+html{height:100%;background:#0A0908;-webkit-text-size-adjust:100%}
+body{height:100%;margin:0}
+.app{
+ --bg:#0A0908;--s1:#12100D;--s2:#1A1712;--s3:#24201A;--line:#2A251D;--line2:#3B3427;
+ --tx:#F4EDDC;--mu:#A39887;--dim:#857B6B;--gold:#D9AA52;--on-gold:#1A1307;--red:#D07358;
+ --gold-hi:color-mix(in srgb,var(--gold) 78%,#fff);--gold-lo:color-mix(in srgb,var(--gold) 66%,#000);
+ --display:'Fraunces',Georgia,'Times New Roman',serif;--body:'Inter',-apple-system,system-ui,'Segoe UI',sans-serif;
+ --ease:cubic-bezier(.32,.72,0,1);
+ --top:env(safe-area-inset-top,0px);--bot:env(safe-area-inset-bottom,0px);
+ position:relative;height:100%;overflow:hidden;background:var(--bg);color:var(--tx);
+ font:400 17px/25px var(--body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+ -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.app *,.app *::before,.app *::after{box-sizing:border-box}
+:where(.app *){margin:0;padding:0}
+:where(.app button,.app input,.app textarea){font:inherit;color:inherit;background:none;border:0}
+:where(.app button){cursor:pointer}
+.app button:focus-visible,.app [role=button]:focus-visible,.app input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.hidden{display:none!important}
+/* one phone, whatever holds it: the bench bezel, the full-bleed phone, or the raw file on a desk */
+/* ───────────── the one view: exactly one screen shown ───────────── */
+.scr{position:absolute;inset:0;display:none;z-index:1;background:var(--bg)}
+.scr.on{display:flex;flex-direction:column}
+.xghost,.frozen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);pointer-events:none}
+.xghost{z-index:3}
+.xghost *,.frozen *{animation:none!important}
+/* ───────────── the top bar ───────────── */
+.top{position:relative;z-index:2;flex:none;display:flex;align-items:center;gap:4px;height:calc(52px + var(--top));padding:var(--top) 14px 0 12px}
+.tb-back{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;color:var(--tx)}
+.tb-sp{display:none}
+.tt{flex:1;min-width:0;padding-left:8px;font:500 17px/24px var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-back+.tt{padding-left:2px}
+/* ───────────── body and foot ───────────── */
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+ padding:6px 20px 28px;display:flex;flex-direction:column;gap:14px}
+.body::-webkit-scrollbar{display:none}
+.body{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 22px),transparent)}
+.body.vmid::before{content:'';flex:1 1 0}
+.body.vmid::after{content:'';flex:1.4 1 0}
+.body>*{flex:none}
+.body.center,.codescr .body{align-items:center}
+.body.center{text-align:center}
+.body.center::before,.body.center::after,.codescr .body::before,.codescr .body::after{content:'';flex:1 1 0;min-height:0}
+.foot{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 20px calc(18px + var(--bot))}
+.frow{display:flex;align-items:center;gap:10px}
+.h1+.p,.h1+.fine,.eyebrow+.h1{margin-top:-6px}
+/* ───────────── type: display 64 · title 32 · heading 22 · body 17 · small 14 · label 12 ───────────── */
+.eyebrow{font:500 12px/16px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.h1{font:500 32px/38px var(--display);letter-spacing:-.005em}
+.h2{font:500 22px/28px var(--display)}
+.p{font:400 17px/25px var(--body)}
+.mu,.p.mu{color:var(--mu)}
+.fine{font:400 14px/20px var(--body);color:var(--mu)}
+.lbl{font:500 12px/16px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--mu)}
+.center{text-align:center}
+.err{color:var(--red)}
+.big,.big2{font:500 32px/1 var(--display)}
+.big small,.big2 small,.bignum small{font:400 14px/1 var(--body);color:var(--mu);margin-left:4px;letter-spacing:0}
+.bignum{font:500 64px/1 var(--display);letter-spacing:-.01em;color:var(--gold)}
+.bignum small{font-size:17px}
+.caption{font:400 17px/25px var(--body);min-height:25px;text-align:center}
+.clock{font:500 64px/1 var(--display);font-variant-numeric:tabular-nums lining-nums;letter-spacing:-.01em}
+.stage~.clock{font:500 22px/28px var(--body);letter-spacing:.02em;color:var(--mu)}
+.wm{font:500 min(64px,15vw)/1.05 var(--display);letter-spacing:-.01em}
+.wm.sm{font-size:32px}
+/* ───────────── buttons ───────────── */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:56px;padding:0 20px;border-radius:16px;
+ background:var(--gold);color:var(--on-gold);font:500 17px/1 var(--body);text-align:center;-webkit-appearance:none;appearance:none;
+ transition:transform .1s,opacity .1s}
+.btn svg{flex:none}
+.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--line2)}
+.btn.quiet{background:transparent;color:var(--mu);height:44px}
+.btn.danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 45%,var(--line2))}
+.btn.slim{width:auto;height:44px;padding:0 20px}
+.btn.sm{width:auto;height:44px;padding:0 16px;font-size:14px;border-radius:14px}
+.btn.wide{width:100%}
+.btn.grow{flex:1;width:auto}
+.btn.who{height:96px;padding:0 28px;border-radius:24px;justify-content:space-between;background:var(--s1);color:var(--tx);
+ border:1px solid var(--line2);font:500 32px/1 var(--display)}
+.btn.who::after{content:'';width:12px;height:12px;border-right:2px solid var(--gold);border-top:2px solid var(--gold);transform:rotate(45deg)}
+.ib{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;color:var(--tx);transition:transform .1s,opacity .1s}
+.ib.round{width:56px;height:56px;border-radius:50%;background:var(--s2);border:1px solid var(--line2)}
+.sndbtn.off{color:var(--dim)}
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;
+ background:var(--s2);border:1px solid var(--line2);color:var(--tx);font:500 14px/1 var(--body);transition:transform .1s,opacity .1s}
+.chip.on{background:color-mix(in srgb,var(--gold) 15%,var(--s1));border-color:var(--gold);color:var(--gold)}
+.chip.wide{display:flex;width:100%;height:52px;border-radius:16px;font-size:17px;background:var(--s1);border-color:var(--line)}
+.chip.wide b{color:var(--gold);font-weight:500}
+.chip.wide::after{content:'';width:8px;height:8px;margin-left:8px;border-right:2px solid var(--dim);border-top:2px solid var(--dim);transform:rotate(45deg)}
+.btn:active,.ib:active,.chip:active,.card.tap:active,.sr:active,.tab:active,.cal-c:active,.rw.tap:active,.dots:active,.pick:active{opacity:.96;transform:scale(.98)}
+/* ───────────── cards and rows ───────────── */
+.card{display:flex;flex-direction:column;gap:8px;padding:18px;border-radius:20px;background:var(--s1);border:1px solid var(--line);text-align:left;color:var(--tx);
+ transition:transform .1s,opacity .1s}
+.card.tap{cursor:pointer}
+.card.center{align-items:center;text-align:center}
+.card.list{gap:14px}
+.card.hero{border-color:color-mix(in srgb,var(--gold) 42%,var(--line));background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 9%,var(--s1)),var(--s1))}
+.card.hero .btn{margin-top:8px}
+.card.sm{padding:14px;gap:6px}
+.card.sm b{font:500 17px/22px var(--body)}
+.card.sm small{font:400 14px/19px var(--body);color:var(--mu)}
+.card.new{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 8%,var(--s1))}
+.li{display:flex;align-items:flex-start;gap:14px;font:400 17px/25px var(--body)}
+.li span{flex:1}
+.li b{flex:none;width:28px;height:28px;margin-top:-1px;border-radius:50%;background:var(--s3);color:var(--gold);font:500 14px/28px var(--body);text-align:center}
+.li i{flex:none;width:28px;height:25px;font-size:0;line-height:0;display:grid;place-items:center}
+.li i::before{content:'';display:block;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dic{width:40px;height:40px;border-radius:12px;background:var(--s3);color:var(--gold);display:grid;place-items:center;margin-bottom:4px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pair .card{gap:6px}
+.bignum.sm{line-height:1.05}
+.rows{display:flex;flex-direction:column;border-radius:20px;background:var(--s1);border:1px solid var(--line);overflow:hidden}
+.rw{display:flex;align-items:center;gap:14px;min-height:64px;padding:12px 16px;border-bottom:1px solid var(--line);text-align:left}
+.rw:last-child{border-bottom:0}
+.rw.tap{cursor:pointer;transition:transform .1s,opacity .1s}
+.rw-l{flex:1;min-width:0;display:flex;flex-direction:column}
+.rw-l b{font:500 17px/23px var(--body);color:var(--tx)}
+.rw-l small{font:400 14px/19px var(--body);color:var(--mu)}
+.rw-r{font:500 17px/23px var(--body);color:var(--mu);text-align:right}
+.chv{color:var(--dim);display:grid;place-items:center}
+.av{flex:none;width:44px;height:44px;border-radius:50%;background:var(--s3);border:1px solid var(--line2);color:var(--gold);display:grid;place-items:center;font:500 22px/1 var(--display)}
+.dotoff{display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;background:var(--dim)}
+/* ───────────── the code ───────────── */
+.codescr .hero{display:flex;flex-direction:column;align-items:center;text-align:center;width:100%}
+.codescr .hero .wm{margin-bottom:10px}
+.dots{display:flex;gap:18px;justify-content:center;padding:14px 22px;margin:14px 0 20px;border-radius:16px}
+.dots i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--dim);transition:background .1s,border-color .1s}
+.dots i.on{background:var(--gold);border-color:var(--gold)}
+.dots.bad i{border-color:var(--red)}
+.dots.bad i.on{background:var(--red);border-color:var(--red)}
+.dots.shake{animation:k-shake .36s}
+@keyframes k-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.keys{display:grid;grid-template-columns:repeat(3,76px);gap:14px 22px;justify-content:center}
+.key{width:76px;height:76px;border-radius:50%;background:var(--s1);border:1px solid var(--line);color:var(--tx);font:500 32px/1 var(--display);
+ display:grid;place-items:center;transition:background .08s,transform .08s}
+.key:active{background:var(--s3);transform:scale(.96)}
+.key.blank{visibility:hidden;border:0;background:none}
+.key.del{background:none;border-color:transparent;color:var(--mu)}
+.key.del svg{width:26px;height:26px}
+.codescr .foot{align-items:center;gap:12px}
+.dogm{display:block;width:44px;height:30px;padding:0;margin:0 auto;color:var(--tx)}
+.dogm svg{display:block;width:44px;height:auto}
+.dogm ellipse{transform-box:fill-box;transform-origin:50% 50%;animation:k-blink 5.6s ease-in-out infinite}
+.dogm.still ellipse{animation:none}
+@keyframes k-blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.08)}}
+.whos{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.body.grow{justify-content:flex-start}
+.body>div[data-when]:not([class]){display:flex;flex-direction:column;gap:14px}
+/* ───────────── finger, pulse, progress bars ───────────── */
+.illus{display:grid;place-items:center;margin:4px 0}
+.finger{display:block;color:var(--gold)}
+.finger .flash{animation:k-flash 2.6s ease-in-out infinite}
+@keyframes k-flash{0%,100%{opacity:.5}50%{opacity:1}}
+.illus.small .finger{width:140px;height:auto}
+.wavecard{width:100%;padding:14px 16px 12px;border-radius:20px;background:var(--s1);border:1px solid var(--line)}
+.wave{display:block;width:100%;height:64px}
+.wave path{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.wavecard .fine{margin-top:6px;text-align:center}
+.segs{display:flex;gap:6px;width:100%;margin-top:6px}
+.segs i{position:relative;flex:1;height:4px;border-radius:2px;background:var(--line2);overflow:hidden}
+.segs i::after{content:'';position:absolute;inset:0;background:var(--gold);transform:scaleX(var(--f,0));transform-origin:0 50%}
+.breathline{position:relative;width:140px;height:3px;margin:26px auto;border-radius:2px;background:var(--line2);overflow:hidden;opacity:0;animation:k-appear .01s linear 400ms forwards}
+.breathline span{position:absolute;inset:0;border-radius:2px;background:var(--gold);transform-origin:50% 50%;animation:k-line 2.8s ease-in-out infinite}
+@keyframes k-appear{to{opacity:1}}
+@keyframes k-line{0%,100%{transform:scaleX(.12)}50%{transform:scaleX(1)}}
+/* ───────────── the ring: A is the Blender video, B is drawn live; both breathe with --p ───────────── */
+.stage{position:relative;display:grid;place-items:center;margin:8px 0 6px}
+.stage.sm{margin:0}
+.ring{--rs:280px;--p:0;position:relative;flex:none;width:var(--rs);height:var(--rs);display:grid;place-items:center}
+.ring::before{content:'';position:absolute;inset:-24%;border-radius:50%;pointer-events:none;
+ background:radial-gradient(closest-side,color-mix(in srgb,var(--gold) 15%,transparent),transparent 72%);opacity:calc(.25 + .75*var(--p))}
+.rB{position:absolute;inset:0;transform:scale(calc(.6 + .4*var(--p)));
+ filter:drop-shadow(0 0 calc(5px + 20px*var(--p)) color-mix(in srgb,var(--gold) 50%,transparent))}
+.rbo{position:absolute;inset:0;display:block;border-radius:50%;
+ background:conic-gradient(from 200deg,var(--gold-lo),var(--gold-hi) 30%,var(--gold) 56%,var(--gold-lo) 80%,var(--gold-hi));
+ -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 15%),#000 calc(100% - 15% + 1px));
+ mask:radial-gradient(farthest-side,transparent calc(100% - 15%),#000 calc(100% - 15% + 1px))}
+.rA{position:absolute;inset:0;display:none;pointer-events:none}
+.rA video,.rA .vsnap{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;transform:scale(1.28);mix-blend-mode:screen}
+.rc{position:relative;z-index:2;display:grid;place-items:center}
+.cue{font:500 22px/28px var(--display);color:var(--tx)}
+.app[data-ring=a] .ring:not([data-show]) .rB,.ring[data-show=a] .rB{display:none}
+.app[data-ring=a] .ring:not([data-show]) .rA,.ring[data-show=a] .rA{display:block}
+.ring[data-show=b] .rA{display:none}
+.ring.fb .rB{display:block!important}
+.ring.fb .rA{display:none!important}
+/* ───────────── the home ───────────── */
+.srs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sr{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 4px 12px;border-radius:20px;background:var(--s1);border:1px solid var(--line);
+ text-align:center;color:var(--tx);cursor:pointer;transition:transform .1s,opacity .1s}
+.sr-c{position:relative;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line2)}
+.sr .ic{position:absolute;inset:0;display:grid;place-items:center;opacity:0}
+.sr .ic svg{width:24px;height:24px}
+.sr b{display:flex;align-items:center;justify-content:center;min-height:34px;font:500 14px/17px var(--body)}
+.sr small{font:400 12px/16px var(--body);color:var(--mu)}
+.sr.todo .sr-c{border-color:var(--gold);color:var(--gold)}
+.sr.todo .ic-play{opacity:1}
+.sr.done .sr-c{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.sr.done .ic-check{opacity:1}
+.sr.done small{color:var(--gold)}
+.sr.locked{opacity:.72}
+.sr.locked .sr-c{border-color:var(--line);color:var(--dim)}
+.sr.locked .ic-lock{opacity:1}
+.week{display:flex;justify-content:space-between;margin:10px 0 8px}
+.wkd{display:flex;flex-direction:column;align-items:center;gap:4px}
+.wkd b{font:500 12px/16px var(--body);color:var(--dim)}
+.wkd:last-child b{color:var(--gold)}
+.wk{display:block;line-height:0}
+.wk svg{display:block}
+.wk svg path{fill:none;stroke:var(--line2);stroke-width:3.2;stroke-linecap:round}
+.wk svg path.on{stroke:var(--gold)}
+.hc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.hc-r{display:grid;grid-template-columns:auto auto;gap:3px 8px;justify-items:end;align-items:baseline}
+.hc-r b{font:500 17px/22px var(--body);color:var(--tx);white-space:nowrap}
+.hc-r small{font:400 12px/16px var(--body);color:var(--mu)}
+.spark{display:block;width:100%;height:64px;margin-top:6px;overflow:visible}
+.sp-a{fill:color-mix(in srgb,var(--gold) 10%,transparent);stroke:none}
+.sp-l{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.sp-d{fill:var(--gold);opacity:.45}
+.sp-e{fill:var(--gold)}
+.axis{display:flex;justify-content:space-between;font:400 12px/16px var(--body);color:var(--dim);margin-top:2px}
+.mc-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+/* ───────────── the tab bar ───────────── */
+.tabs{flex:none;display:flex;padding:8px 8px calc(6px + var(--bot));background:color-mix(in srgb,var(--bg) 94%,transparent);border-top:1px solid var(--line)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:var(--mu);font:500 12px/16px var(--body);transition:transform .1s,opacity .1s}
+.tab b{font-weight:500}
+.tab.on{color:var(--gold)}
+.tabs.still{border:1px solid var(--line);border-radius:20px;background:var(--s1);padding-bottom:6px}
+/* ───────────── the test, the result, the score bars ───────────── */
+.bars{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;height:142px;width:100%;margin:22px 0 4px;padding:0 4px}
+.rbar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px}
+.rbar i{position:relative;display:block;width:100%;min-height:6px;border-radius:8px 8px 4px 4px;background:var(--line2)}
+.rbar i::after{content:attr(data-v);position:absolute;left:0;right:0;top:-19px;text-align:center;font:400 12px/16px var(--body);color:var(--dim)}
+.rbar b{font:500 14px/16px var(--body);color:var(--mu)}
+.rbar.best i{background:var(--gold)}
+.rbar.best i::after,.rbar.best b{color:var(--gold)}
+.prow{display:grid;grid-template-columns:34px 1fr 30px;align-items:center;gap:12px;padding:6px 0}
+.pn,.prow b{font:500 14px/16px var(--body);color:var(--mu)}
+.prow b{text-align:right}
+.pb{display:block;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.pb i{display:block;height:100%;width:0;border-radius:4px;background:var(--dim)}
+.prow.best .pb i{background:var(--gold)}
+.prow.best .pn,.prow.best b{color:var(--gold)}
+.fillring{--f:0;position:relative;width:132px;height:132px;margin:0 auto 6px;border-radius:50%;display:grid;place-items:center;
+ border:2px solid color-mix(in srgb,var(--gold) 55%,var(--line2))}
+.fillring::before{content:'';position:absolute;inset:-2px;border-radius:50%;background:var(--gold);opacity:var(--f);transform:scale(calc(.55 + .45*var(--f)));
+ box-shadow:0 0 calc(34px*var(--f)) color-mix(in srgb,var(--gold) 45%,transparent)}
+.fr-check{position:relative;color:var(--on-gold);opacity:var(--f)}
+.fr-check svg{width:52px;height:52px}
+/* ───────────── progress and one day ───────────── */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px 5px}
+.calh{text-align:center;font:500 12px/16px var(--body);color:var(--dim);padding-bottom:2px}
+.calb{display:block}
+.cal-c{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:58px;padding:6px 0 5px;border-radius:12px;background:var(--s1);
+ border:1px solid var(--line);color:var(--mu);transition:transform .1s,opacity .1s}
+.cal-c b{font:500 12px/14px var(--body)}
+.cal-c .wk{display:block;line-height:0}
+.cal-c.today{border-color:var(--gold);color:var(--gold)}
+.cal-c.off{opacity:.4;background:transparent;border-style:dashed}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.trio .big2{font-size:22px}
+.curve{display:block;width:100%;height:96px;overflow:visible}
+.cv{fill:none;stroke:var(--gold);stroke-width:1.6;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.cv-s{fill:none;stroke:var(--dim);stroke-width:1;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
+/* ───────────── settings and the guide sound ───────────── */
+.snd{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px;border-radius:20px;background:var(--s1);border:1px solid var(--line)}
+.snd.on{border-color:var(--gold)}
+.pick{flex:1;min-width:0;display:flex;align-items:center;gap:14px;padding:10px;text-align:left;color:var(--tx);transition:transform .1s,opacity .1s}
+.radio{position:relative;flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--dim)}
+.snd.on .radio{border-color:var(--gold)}
+.snd.on .radio::after{content:'';position:absolute;inset:4px;border-radius:50%;background:var(--gold)}
+.vol{display:flex;align-items:center;gap:14px}
+.vol input{flex:1;min-width:0;height:32px;margin:0;-webkit-appearance:none;appearance:none;background:transparent;touch-action:pan-y}
+.vol input::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line2)}
+.vol input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-12px;border-radius:50%;background:var(--gold);border:0;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.vol input::-moz-range-track{height:4px;border-radius:2px;background:var(--line2)}
+.vol input::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--gold);border:0}
+/* ───────────── the prototype's own controls — never the app's ───────────── */
+/* ───────────── the map ───────────── */
+/* ───────────── the sheet ───────────── */
+.under{position:absolute;inset:0;z-index:0;opacity:.4;overflow:hidden;pointer-events:none}
+.dim{position:absolute;inset:0;z-index:1}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;flex-direction:column;gap:12px;
+ padding:10px 20px calc(20px + var(--bot));border-radius:28px 28px 0 0;background:var(--s2);border-top:1px solid var(--line2)}
+.grab{width:40px;height:5px;margin:0 auto 6px;border-radius:3px;background:var(--line2)}
+.sh{margin:0}
+/* ───────────── the motion: push 280 ms · sheet 320 ms · swap under 100 ms · wait 400 ms then a breathing line ───────────── */
+@keyframes k-push{from{transform:translateX(100%)}to{transform:none}}
+@keyframes k-pushout{from{transform:none;opacity:1}to{transform:translateX(-26%);opacity:.55}}
+@keyframes k-back{from{transform:translateX(-26%);opacity:.55}to{transform:none;opacity:1}}
+@keyframes k-backout{from{transform:none}to{transform:translateX(100%)}}
+@keyframes k-sheetup{from{transform:translateY(100%)}to{transform:none}}
+@keyframes k-sheetdown{from{transform:none}to{transform:translateY(100%)}}
+@keyframes k-under{from{opacity:0}to{opacity:.4}}
+@keyframes k-fadeout{from{opacity:1}to{opacity:0}}
+.scr.in-push{z-index:2;animation:k-push 280ms var(--ease) both;box-shadow:-14px 0 30px rgba(0,0,0,.55)}
+.xghost.g-push{z-index:1;animation:k-pushout 280ms var(--ease) both}
+.scr.in-back{z-index:1;animation:k-back 280ms var(--ease) both}
+.xghost.g-back{z-index:3;animation:k-backout 280ms var(--ease) both;box-shadow:-14px 0 30px rgba(0,0,0,.55)}
+.scr.in-sheet .sheet{animation:k-sheetup 320ms var(--ease) both}
+.scr.in-sheet .under{animation:k-under 320ms var(--ease) both}
+.xghost.g-sheetout{background:transparent}
+.xghost.g-sheetout .sheet{animation:k-sheetdown 320ms var(--ease) both!important}
+.xghost.g-sheetout .under{display:none}
+.xghost.g-sheetout .dim{background:rgba(10,9,8,.6);animation:k-fadeout 320ms var(--ease) both!important}
+.xghost.g-push,.xghost.g-back{animation-fill-mode:both}
+/* reduced motion: the moves and the decoration stop; the ring stays — it is the guide, and it is driven by the script */
+@media (prefers-reduced-motion:reduce){.app *,.app *::before,.app *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.001ms!important}}

@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<title>Cohérence · lecture du pouls</title>
+<style>
+  :root { --bg:#0A0908; --s1:#12100D; --s2:#1A1712; --line:#2A251D; --tx:#F4EDDC; --mu:#A39887; --gold:#D9AA52; --red:#D07358; --ok:#8FBF7A; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; background:var(--bg); color:var(--tx); font:16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-text-size-adjust:100%; }
+  main { max-width: 430px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)); }
+  a.back { display:inline-block; color:var(--mu); text-decoration:none; padding:8px 0; }
+  h1 { font-size: 22px; margin: 4px 0 2px; font-weight: 600; }
+  p { margin: 6px 0; color: var(--mu); }
+  button { font: inherit; color: var(--bg); background: var(--gold); border: 0; border-radius: 14px; padding: 14px 16px; width: 100%; margin: 6px 0; font-weight: 600; }
+  button.ghost { background: transparent; color: var(--tx); border: 1px solid var(--line); }
+  button[disabled] { opacity: .4; }
+  .card { background: var(--s1); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
+  .row { display:flex; justify-content: space-between; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row b { font-weight: 500; color: var(--mu); }
+  .row span { text-align: right; font-variant-numeric: tabular-nums; }
+  canvas { width: 100%; height: 96px; display:block; background:#0d0b09; border-radius: 10px; }
+  .sw { height: 30px; border-radius: 8px; border: 1px solid var(--line); margin-bottom: 8px; }
+  .ok { color: var(--ok); } .bad { color: var(--red); } .gold { color: var(--gold); }
+  .verdict { display:flex; flex-direction:column; gap:0; }
+  .verdict .v { display:flex; align-items:center; gap:12px; padding: 9px 0; border-bottom:1px solid var(--line); }
+  .verdict .v:last-of-type { border-bottom:0; }
+  .dot { flex:none; width:14px; height:14px; border-radius:50%; background:var(--line); }
+  .dot.ok { background:var(--ok); } .dot.bad { background:var(--red); } .dot.gold { background:var(--gold); }
+  .v b { display:block; font-weight:600; }
+  .v small { display:block; color:var(--mu); }
+  .say { font-size:17px; color:var(--tx); margin:10px 0 2px; }
+  details summary { color:var(--mu); padding:6px 0; cursor:pointer; }
+  textarea { width: 100%; height: 170px; background: #0d0b09; color: var(--tx); border: 1px solid var(--line); border-radius: 10px; font: 11px/1.35 ui-monospace, Menlo, monospace; padding: 8px; }
+  small { color: var(--mu); }
+  ol { margin: 6px 0 6px 20px; padding: 0; color: var(--mu); }
+  .camvideo { position: fixed; left: 0; top: 0; width: 2px; height: 2px; opacity: .01; pointer-events: none; z-index: -1; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/lab/index.html">‹ Atelier</a>
+  <h1>Lecture du pouls</h1>
+  <p>Le test qui décide de tout : le flash s'allume-t-il, le doigt est-il vu, le pouls sort-il ?</p>
+  <ol>
+    <li>Touche « Ouvrir la caméra » (l'iPhone te demande l'autorisation).</li>
+    <li>Pose le bout du doigt sur l'objectif <em>et</em> sur le flash, à plat, sans appuyer fort.</li>
+    <li>Appuie le coude sur une table et reste immobile 10 à 20 secondes.</li>
+    <li>Pour l'enregistrement : touche le bouton <em>avant</em> de poser le doigt. Il démarre tout seul quand il te voit.</li>
+  </ol>
+
+  <p><small>Pour cet essai, mets le verrouillage automatique de l’iPhone sur 5 minutes (Réglages → Affichage et luminosité → Verrouillage auto) : si l’écran s’éteint pendant la lecture, la caméra s’arrête. L’app essaie de garder l’écran allumé ; cette page aussi, mais rien ne le prouve encore.</small></p>
+
+  <button id="go">Ouvrir la caméra</button>
+
+  <div class="card" id="live" hidden>
+    <div class="verdict">
+      <div class="v"><i class="dot" id="d-torch"></i><div><b>Flash</b><small id="t-torch">–</small></div></div>
+      <div class="v"><i class="dot" id="d-cov"></i><div><b>Doigt</b><small id="t-cov">–</small></div></div>
+      <div class="v"><i class="dot" id="d-pulse"></i><div><b>Pouls</b><small id="t-pulse">–</small></div></div>
+    </div>
+    <p class="say" id="say"></p>
+    <canvas id="wave" width="800" height="240"></canvas>
+    <details>
+      <summary>Détails techniques</summary>
+      <div class="sw" id="sw"></div>
+      <div class="row"><b>Caméra</b><span id="s-state">–</span></div>
+      <div class="row"><b>Images</b><span id="s-frames">–</span></div>
+      <div class="row"><b>Couleur (R · V · B)</b><span id="s-color">–</span></div>
+      <div class="row"><b>Rouge / vert</b><span id="s-ratio">–</span></div>
+      <div class="row"><b>Qualité du signal</b><span id="s-sqi">–</span></div>
+    </details>
+  </div>
+
+  <div id="tools" hidden>
+    <button id="torch" class="ghost">Réessayer le flash</button>
+    <button id="rec">Enregistrer 40 s et analyser</button>
+    <p id="recstat" hidden></p>
+    <div class="card" id="recres" hidden></div>
+    <button id="copy" class="ghost">Copier le rapport</button>
+    <button id="copyraw" class="ghost" disabled>Copier avec les mesures brutes</button>
+    <textarea id="report" readonly spellcheck="false"></textarea>
+    <p><small>Colle le rapport dans le chat : il dit ce que le téléphone déclare de sa caméra et ce qui s'est passé à chaque essai du flash. Les « mesures brutes » (après un enregistrement) permettent de régler la lecture sur ton iPhone sans te redemander de refaire quoi que ce soit.</small></p>
+  </div>
+</main>
+
+<script src="/js/version.js"></script>
+<script src="/js/analysis.js"></script>
+<script src="/js/guide.js"></script>
+<script src="/js/pulse.js"></script>
+<script>
+(function () {
+  var P = COH.pulse, $ = function (id) { return document.getElementById(id); };
+  var cv = $('wave'), cx = cv.getContext('2d'), lastRec = null, lastRaw = null, timer = 0, notes = [];
+
+  function paintWave() {
+    var w = cv.width, h = cv.height; cx.clearRect(0, 0, w, h);
+    cx.strokeStyle = '#2A251D'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(0, h / 2); cx.lineTo(w, h / 2); cx.stroke();
+    var pts = P.wave(6); if (pts.length < 3) return;
+    cx.strokeStyle = P.steady ? '#D9AA52' : '#857B6B'; cx.lineWidth = 3.5; cx.lineJoin = 'round'; cx.beginPath();
+    pts.forEach(function (p, i) { var x = w * (1 - p.t / 6), y = h / 2 - p.y * h * 0.36; if (i) cx.lineTo(x, y); else cx.moveTo(x, y); });
+    cx.stroke();
+  }
+  function line(dotId, txtId, cls, text) { $(dotId).className = 'dot ' + cls; $(txtId).textContent = text; }
+
+  /* what a person needs to read: three lines and one sentence */
+  function verdict(s, r) {
+    var dark = s.color.r < 60 && s.color.g < 30;
+    if (s.torch === 'on') line('d-torch', 't-torch', 'ok', 'allumé');
+    else if (s.torch === 'assumed') line('d-torch', 't-torch', dark ? 'bad' : 'gold', dark ? 'demandé, mais l’image est noire : il ne semble pas allumé' : 'demandé (l’iPhone ne dit pas s’il est allumé ; l’image dira)');
+    else if (s.torch === 'trying') line('d-torch', 't-torch', 'gold', 'j’essaie de l’allumer…');
+    else if (s.torch === 'refused') line('d-torch', 't-torch', 'bad', 'refusé par le téléphone (après plusieurs essais)');
+    else line('d-torch', 't-torch', 'gold', 'éteint');
+    var ratio = r.ratio;
+    if (r.coveredLenient) line('d-cov', 't-cov', 'ok', 'vu (rouge ' + ratio.toFixed(1) + ' fois le vert)');
+    else line('d-cov', 't-cov', 'bad', 'je ne vois pas de doigt : recouvre l’objectif ET le flash');
+    if (s.steady) line('d-pulse', 't-pulse', 'ok', 'stable · ' + (s.hr ? s.hr.toFixed(0) : '–') + ' battements par minute');
+    else line('d-pulse', 't-pulse', 'gold', 'je cherche… (' + ({ camera: 'caméra', flash: 'flash', signal: 'signal' }[P.failure()] || P.failure()) + ')');
+    var say;
+    if (s.state !== 'live') say = 'La caméra n’est pas ouverte (' + s.state + ').';
+    else if (s.steady && s.torch !== 'on' && (s.torch === 'refused' || s.torch === 'off' || dark)) say = '✓ Le pouls est lu, mais sans le flash : à la lumière ambiante. Fais l’enregistrement de 40 s pour voir si le signal reste assez bon.';
+    else if (s.steady) say = '✓ Ça marche : le pouls est lu.';
+    else if (dark && s.torch !== 'on') say = '✗ Le flash ne s’allume pas : l’image est noire. Touche « Réessayer le flash ». Sinon, essaie près d’une fenêtre ou sous une lampe : l’app sait lire le pouls à la lumière ambiante quand le signal est assez bon.';
+    else if (!r.coveredLenient) say = 'Pose le bout du doigt sur l’objectif et le flash, ensemble, sans appuyer fort.';
+    else say = 'Doigt vu, je cherche le pouls… reste immobile quelques secondes.';
+    $('say').textContent = say;
+  }
+
+  function refresh() {
+    var s = P.snapshot(), c = s.color, r = P.report();
+    $('sw').style.background = 'rgb(' + Math.round(c.r) + ',' + Math.round(c.g) + ',' + Math.round(c.b) + ')';
+    $('s-state').textContent = s.state + ' · ' + s.fps.toFixed(1) + ' images/s · horloge : ' + s.timeSrc;
+    $('s-frames').textContent = s.frames;
+    $('s-color').textContent = c.r.toFixed(0) + ' · ' + c.g.toFixed(0) + ' · ' + c.b.toFixed(0);
+    $('s-ratio').textContent = r.ratio.toFixed(2);
+    $('s-sqi').textContent = s.sqi.toFixed(2) + (s.chan ? ' · canal ' + s.chan + (s.pol > 0 ? '+' : '−') : '');
+    verdict(s, r);
+    paintWave();
+    r.notes = notes; if (lastRec) r.recording = lastRec;
+    var ta = $('report'); if (document.activeElement !== ta) ta.value = JSON.stringify(r, null, 1);
+  }
+
+  $('go').addEventListener('click', function () {
+    $('go').disabled = true; $('go').textContent = 'J’ouvre…';
+    try { COH.guide.awake.on(); } catch (e) { notes.push('awake failed: ' + e); }             // the screen stays lit while the page reads (a touch is what lets the phone allow it)
+    P.open().then(function () {
+      $('go').hidden = true; $('live').hidden = false; $('tools').hidden = false;
+      clearInterval(timer); timer = setInterval(refresh, 250); refresh();
+    }, function (e) {
+      $('go').disabled = false; $('go').textContent = 'Ouvrir la caméra';
+      notes.push('open failed: ' + JSON.stringify(e)); $('live').hidden = false; $('tools').hidden = false; refresh();
+      var k = e && e.kind;
+      $('say').textContent = k === 'denied' ? '✗ La caméra est refusée. Réglages de l’iPhone → Chrome (ou l’app) → Caméra, puis recharge la page.' : '✗ Impossible d’ouvrir la caméra (' + k + ' · ' + (e && e.name) + ').';
+    });
+  });
+
+  $('torch').addEventListener('click', function () { notes.push('manual torch retry at ' + new Date().toISOString()); P.retryTorch().then(refresh); });
+
+  /* the recording. It waits for the finger (so the button can be pressed before the finger goes on), lets the picture settle,
+     then keeps 40 s of finger. A finger that leaves pauses the count — the pauses are written in the report — so one slip
+     does not spoil the whole attempt. */
+  var REC_S = 40, SEE_S = 1.5, SETTLE_S = 3, LOSE_S = 1.2, BACK_S = 1.0, WAIT_MAX_S = 60, REC_MAX_S = 110, recTimer = 0;
+  function fingerNow(s) { var c = s.color; return s.state === 'live' && c.r >= 20 && c.r >= 1.25 * Math.max(c.g, 1); }
+  var WHY = { 'few-beats': 'trop peu de battements lus', 'low-coverage': 'battements lus sur trop peu du temps', 'low-quality': 'signal trop irrégulier', 'short-stretches': 'morceaux lus trop courts', 'short': 'enregistrement trop court' };
+
+  $('rec').addEventListener('click', function () {
+    var b = $('rec'), st = $('recstat'), tStart = Date.now() / 1000, phase = 'wait', since = null, settleAt = 0, recAt = 0, lostAt = null, backAt = null,
+        paused = false, lostFrom = 0, lostS = 0, pauses = 0, events = [];
+    st.hidden = false;
+    if (P.state !== 'live') { st.textContent = 'La caméra n’est pas ouverte : touche d’abord « Ouvrir la caméra ».'; return; }
+    b.disabled = true; $('recres').hidden = true; clearInterval(recTimer);
+
+    function reset(msg) { clearInterval(recTimer); if (phase === 'rec') P.stopRecording(); st.textContent = msg; b.disabled = false; b.textContent = 'Enregistrer 40 s et analyser'; }
+    function finish() {
+      clearInterval(recTimer);
+      var r = P.stopRecording();
+      if (!r || r.t.length < 90) { st.textContent = 'Trop peu d’images enregistrées (' + (r ? r.t.length : 0) + ').'; b.disabled = false; b.textContent = 'Enregistrer 40 s et analyser'; return; }
+      lastRaw = r;
+      var a = COH.analysis.analyzeWindow({ t: r.t, r: r.r, g: r.g, segs: r.segs }, { spectral: false, curve: false }), seen = 0, i;
+      for (i = 0; i < r.t.length; i++) if (r.r[i] >= 20 && r.r[i] >= 1.25 * Math.max(r.g[i], 1)) seen++;
+      lastRec = { seconds: +r.seconds.toFixed(1), frames: r.t.length, ok: a.ok, reason: a.reason, hr: a.hr && +a.hr.toFixed(1), rmssd: a.rmssd && +a.rmssd.toFixed(1),
+                  coverage: +a.coverage.toFixed(2), sqi: +a.sqi.toFixed(2), chan: a.chan, pol: a.pol, nBeats: a.nBeats, nValid: a.nValid,
+                  fingerFrames: +(seen / r.t.length).toFixed(2), pauses: pauses, lostSeconds: +lostS.toFixed(1), events: events, waitedS: +(recAt - tStart).toFixed(1) };
+      var fin = '<div class="row"><b>Doigt vu</b><span>' + Math.round(100 * lastRec.fingerFrames) + ' % de l’enregistrement' + (pauses ? ' · ' + pauses + ' pause' + (pauses > 1 ? 's' : '') : '') + '</span></div>';
+      $('recres').hidden = false;
+      $('recres').innerHTML = a.ok
+        ? '<div class="row"><b>Pouls</b><span class="ok">' + lastRec.hr + ' / min</span></div><div class="row"><b>Variabilité (RMSSD)</b><span>' + lastRec.rmssd + ' ms</span></div><div class="row"><b>Battements lus</b><span>' + a.nValid + ' sur ' + a.nBeats + '</span></div><div class="row"><b>Qualité</b><span>' + lastRec.sqi + '</span></div>' + fin
+        : '<div class="row"><b>Illisible</b><span class="bad">' + (WHY[a.reason] || a.reason) + '</span></div><div class="row"><b>Battements lus</b><span>' + a.nValid + ' sur ' + a.nBeats + ' · sur ' + Math.round(lastRec.coverage * 100) + ' % du temps</span></div><div class="row"><b>Qualité</b><span>' + lastRec.sqi + '</span></div>' + fin;
+      st.textContent = 'Terminé. Touche « Copier avec les mesures brutes », puis colle le texte dans le chat.';
+      b.disabled = false; b.textContent = 'Enregistrer 40 s et analyser'; $('copyraw').disabled = false; refresh();
+    }
+    function step() {
+      var s = P.snapshot(), seen = fingerNow(s), now = Date.now() / 1000;
+      if (phase === 'wait') {
+        b.textContent = 'J’attends ton doigt…';
+        st.textContent = seen ? 'Je te vois. Ne bouge plus…' : 'Pose le doigt sur l’objectif et le flash, à plat, sans appuyer.';
+        if (!seen) since = null; else if (since === null) since = now;
+        if (since !== null && now - since >= SEE_S) { phase = 'settle'; settleAt = now; }
+        else if (now - tStart > WAIT_MAX_S) reset('Je n’ai pas vu de doigt en ' + WAIT_MAX_S + ' s.');
+      } else if (phase === 'settle') {
+        b.textContent = 'Ne bouge plus… ' + Math.max(1, Math.ceil(SETTLE_S - (now - settleAt)));
+        st.textContent = seen ? 'Je laisse l’image se stabiliser.' : 'Le doigt a bougé : remets-le.';
+        if (!seen) { phase = 'wait'; since = null; }
+        else if (now - settleAt >= SETTLE_S) { phase = 'rec'; recAt = now; P.startRecording('lab'); }
+      } else {
+        var got = P.recordingSeconds();
+        if (!paused) {
+          if (seen) lostAt = null;
+          else if (lostAt === null) lostAt = now;
+          else if (now - lostAt >= LOSE_S) { P.pauseRecording(); paused = true; pauses++; lostFrom = now; backAt = null; events.push({ at: +got.toFixed(1), wall: +(now - recAt).toFixed(1), what: 'lost' }); }
+        } else if (seen) {
+          if (backAt === null) backAt = now;
+          else if (now - backAt >= BACK_S) { P.resumeRecording(); paused = false; lostS += now - lostFrom; lostAt = null; events.push({ at: +got.toFixed(1), wall: +(now - recAt).toFixed(1), what: 'back' }); }
+        } else backAt = null;
+        b.textContent = 'J’enregistre… ' + Math.max(0, Math.ceil(REC_S - got)) + ' s';
+        st.textContent = paused ? 'Doigt perdu : remets-le, le compte reprend.' : (P.steady ? 'Pouls vu · ' + Math.round(P.hr) + ' par minute.' : 'Je cherche le pouls… reste immobile.');
+        if (got >= REC_S) finish();
+        else if (now - recAt > REC_MAX_S) finish();
+      }
+    }
+    recTimer = setInterval(step, 250); step();
+  });
+
+  function raw() {                                              // the samples of the last recording, compact: time in ms from the first frame, two colour channels, and sums to catch a damaged paste
+    if (!lastRaw) return null;
+    var t0 = lastRaw.t[0], rd = function (x) { return Math.round(x * 100) / 100; }, sum = function (a, k) { var q = 0; for (var i = 0; i < a.length; i++) q += Math.round(a[i] * k); return q; };
+    var dt = Array.prototype.map.call(lastRaw.t, function (t) { return Math.round((t - t0) * 1000); });
+    var r = Array.prototype.map.call(lastRaw.r, rd), g = Array.prototype.map.call(lastRaw.g, rd);
+    return { t0: +t0.toFixed(3), unit: 'dt in ms from t0; segs in seconds on the same clock as t0', dt: dt, r: r, g: g, segs: lastRaw.segs || null,
+             check: { n: dt.length, dt: sum(dt, 1), r: sum(r, 100), g: sum(g, 100) } };
+  }
+  function copyText(text, btn, label) {
+    var ta = $('report'); ta.value = text;
+    var done = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = label; refresh(); }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { ta.focus(); ta.select(); document.execCommand('copy'); done(); });
+    else { ta.focus(); ta.select(); document.execCommand('copy'); done(); }
+  }
+  $('copy').addEventListener('click', function () { copyText($('report').value, $('copy'), 'Copier le rapport'); });
+  $('copyraw').addEventListener('click', function () {
+    var r = P.report(); r.notes = notes; if (lastRec) r.recording = lastRec; r.samples = raw();
+    copyText(JSON.stringify(r), $('copyraw'), 'Copier avec les mesures brutes');
+  });
+})();
+</script>
+</body>
+</html>
